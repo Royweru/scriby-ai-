@@ -56,6 +56,7 @@ const StatusBox = ({ message, isError = false }: { message: string | null, isErr
 // --- RecorderCard Props Interface ---
 interface RecorderCardProps {
     isRecording: boolean;
+    isUploading?: boolean;
     onStart: () => void;
     onStop: () => void;
     onUpload: () => void;
@@ -65,7 +66,7 @@ interface RecorderCardProps {
 }
 
 // --- Component: Recording Interface Card ---
-const RecorderCard = ({ isRecording, onStart, onStop, onUpload, audioUrl, statusMessage, onFileSelect }: RecorderCardProps) => {
+const RecorderCard = ({ isRecording, onStart, onStop, onUpload, audioUrl, statusMessage,isUploading, onFileSelect }: RecorderCardProps) => {
   const [canRecord, setCanRecord] = useState(false);
   // Type the ref for the file input element
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -132,7 +133,7 @@ const RecorderCard = ({ isRecording, onStart, onStop, onUpload, audioUrl, status
         {/* Upload Button */}
         <button
           onClick={() => fileInputRef.current?.click()}
-          disabled={isRecording || !!audioUrl} // Disable upload if recording or a file is present
+          disabled={isRecording || !!audioUrl ||isUploading} // Disable upload if recording or a file is present
           className={`
             w-24 h-24 rounded-full flex flex-col items-center justify-center 
             transition-all duration-300 transform shadow-2xl text-xs
@@ -193,7 +194,7 @@ const App = () => {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string>("Your transcribed text will appear here after successful upload and processing by the n8n workflow.");
-
+const [ isUploading, setIsUploading ] = useState<boolean>(false);
   // Type refs for native browser APIs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -280,6 +281,7 @@ const App = () => {
     formData.append('data', audioBlobRef.current, 'audio_input.bin'); 
 
     try {
+      setIsUploading(true);
       const response = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
         body: formData,
@@ -307,6 +309,7 @@ const App = () => {
       setStatusMessage(`Error: Failed to trigger workflow. Check N8N URL and workflow status. (${error.message})`);
     } finally {
       // Clean up local resources
+      setIsUploading(false);
       setAudioUrl(null);
       audioBlobRef.current = null;
     }
@@ -319,7 +322,7 @@ const App = () => {
         <h1 className="text-5xl font-extrabold text-white mb-2 tracking-tight">
           Cloud Voice AI: <span className="text-cyan-400">Next-Gen Transcription</span>
         </h1>
-        <p className="text-xl text-slate-400">Live Recording $\rightarrow$ N8N Workflow $\rightarrow$ Google STT</p>
+        <p className="text-xl text-slate-400">Live Recording  N8N Workflow  Google STT</p>
       </header>
 
       <div className="grid lg:grid-cols-2 gap-8 w-full max-w-7xl px-4">
@@ -330,6 +333,7 @@ const App = () => {
             isRecording={isRecording}
             onStart={startRecording}
             onStop={stopRecording}
+            isUploading={isUploading}
             onUpload={handleUpload}
             audioUrl={audioUrl}
             statusMessage={statusMessage}
